@@ -1,0 +1,72 @@
+Until this moment, I did not actively manage my GitHub, but now I decided that it is necessary. 
+Therefore, I begin with the 13th episode of the Massa. 
+Although I have been holding this node for a long time.
+
+
+Updating packages
+sudo apt update && sudo apt upgrade -y
+
+Install the necessary packages
+sudo apt install wget jq git build-essential pkg-config libssl-dev -y
+
+Download and unzip binaries
+massa_version=`wget -qO- https://api.github.com/repos/massalabs/massa/releases/latest | jq -r ".tag_name"`; \
+wget -qO $HOME/massa.tar.gz "https://github.com/massalabs/massa/releases/download/${massa_version}/massa_${massa_version}_release_linux.tar.gz"; \
+tar -xvf $HOME/massa.tar.gz; \
+rm -rf $HOME/massa.tar.gz
+
+
+Make binary files executable
+chmod +x $HOME/massa/massa-node/massa-node \
+$HOME/massa/massa-client/massa-client
+
+
+Come up with a password for the wallet and node, run the command and enter it, thereby adding it to the system as a variable (without special characters)
+. <(wget -qO- https://raw.githubusercontent.com/SecorD0/utils/main/miscellaneous/insert_variable.sh) -n massa_password
+
+Check if the saved password is correct
+echo "$massa_password"
+
+If the password is incorrect, then add it manually
+sed -i "/ massa_password=/d" $HOME/.bash_profile
+echo 'export massa_password="ВВЕСТИ_ПАРОЛЬ"' >> $HOME/.bash_profile
+. $HOME/.bash_profile
+
+Add commands to the system as variables:
+
+Viewing the node log;
+Client launch;
+View information about the node;
+View information about the wallet;
+Buying ROLLs.
+. <(wget -qO- https://raw.githubusercontent.com/SecorD0/Massa/main/insert_variables.sh)
+
+Change boot nodes in config
+. <(wget -qO- https://raw.githubusercontent.com/SecorD0/Massa/main/multi_tool.sh) \
+-rb
+
+Create service file
+sudo tee <<EOF >/dev/null /etc/systemd/system/massad.service
+[Unit]
+Description=Massa Node
+After=network-online.target
+
+[Service]
+User=$USER
+WorkingDirectory=$HOME/massa/massa-node
+ExecStart=$HOME/massa/massa-node/massa-node -p "$massa_password"
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+Run service file
+sudo systemctl daemon-reload
+sudo systemctl enable massad
+sudo systemctl restart massad
+
+Wait for Successful bootstrap to appear
+massa_log
